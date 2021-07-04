@@ -33,7 +33,7 @@ func init() {
 }
 
 func main() {
-
+	header()
 	if len(os.Args) < 2 {
 		fmt.Println("expected 'find' or 'attack' subcommands")
 		fmt.Println("")
@@ -74,4 +74,17 @@ func paraUsage() {
 	find.Usage()
 	attack.Usage()
 
+}
+
+func header() {
+	header := `
+__________                            __________                __                
+\______   \_____ ____________    _____\______   \__ __  _______/  |_  ___________ 
+ |     ___/\__  \\_  __ \__  \  /     \|    |  _/  |  \/  ___/\   __\/ __ \_  __ \
+ |    |     / __ \|  | \// __ \|  Y Y  \    |   \  |  /\___ \  |  | \  ___/|  | \/
+ |____|    (____  /__|  (____  /__|_|  /______  /____//____  > |__|  \___  >__|   
+                \/           \/      \/       \/           \/            \/       
+                                                                             
+`
+	fmt.Println(header)
 }

@@ -57,7 +57,8 @@ func FindMain() {
 
 	ScanGet(words)
 	ScanPost(words)
-	fmt.Println()
+
+	fmt.Println("\033[u\033[K\n")
 	if len(FoundGet) > 0 {
 		fmt.Println("[+] Found", len(FoundGet), "GET parameters:", strings.Join(FoundGet, ", "))
 
@@ -74,7 +75,7 @@ func FindMain() {
 }
 
 func ScanPost(words []string) {
-	fmt.Println("\033[u\033[K[!] Starting Auto Calibration (POST)")
+	fmt.Println("\033[u\033[K\n[!] Starting Auto Calibration (POST)")
 	ac, err := AutoCalibrated(*URL, http.MethodPost)
 	if err != nil {
 		fmt.Println("[ERROR] AutoCalibration Failed:", err.Error())
@@ -91,7 +92,6 @@ func ScanPost(words []string) {
 		if threads.wC < *Threads {
 			threads.wC++
 			threads.wG.Add(1)
-
 			go threadFunc(*URL, http.MethodPost, ac, chunk)
 		} else {
 			threads.wG.Wait()
@@ -140,57 +140,51 @@ func threadFunc(url string, method core.Method, cal *Calibration, chunk []string
 	if !isdiff && msg != "" {
 		fmt.Println("[ERROR]", msg)
 	} else if isdiff {
-		diff, p := NarrowHits(*URL, http.MethodGet, p, cal)
-		if diff {
-			for k := range p {
-				if method == http.MethodGet {
-					fmt.Println("\033[u\033[K", "[+] Found Parameter:", k, "(GET)")
-				}
-				if method == http.MethodPost {
-					fmt.Println("\033[u\033[K", "[+] Found Parameter:", k, "(POST)")
-				}
-				fmt.Println()
-				fmt.Print("\033[s")
-				if method == http.MethodGet {
-					FoundGet = append(FoundGet, k)
-				}
-				if method == http.MethodPost {
-					FoundPost = append(FoundPost, k)
-				}
-				break
-			}
-
-		}
+		NarrowHits(*URL, method, p, cal)
 	}
 	threads.wC--
 	threads.wG.Done()
 }
 
-//! narrowhits is missing params if they are in the same chunk
-
-// NarrowHits splits a ParamSet in half, makes a request to each half and returns (true,p) if down to one param, else (false, param)
-func NarrowHits(url string, method core.Method, params core.ParamSet, cal *Calibration) (bool, core.ParamSet) {
-	if len(params) > 1 {
-		a, b := splitMap(params)
-		isdiffa, _ := requestAndDiff(url, method, a, cal)
-		if isdiffa {
-			done, p := NarrowHits(url, method, a, cal)
-			if done {
-				return true, p
-			}
+// NarrowHits recursively splits, requests and compares any hits until parameter length is 1.
+func NarrowHits(url string, method core.Method, params core.ParamSet, cal *Calibration) {
+	a, b := splitMap(params)
+	isdiffa, _ := requestAndDiff(url, method, a, cal)
+	if isdiffa {
+		if len(a) == 1 {
+			parseFinal(a, method)
+		} else {
+			NarrowHits(url, method, a, cal)
 		}
-		isdiffb, _ := requestAndDiff(url, method, b, cal)
-		if isdiffb {
-			done, p := NarrowHits(url, method, b, cal)
-			if done {
-				return true, p
-			}
-		}
-
-	} else {
-		return true, params
 	}
-	return false, params
+	isdiffb, _ := requestAndDiff(url, method, b, cal)
+	if isdiffb {
+		if len(b) == 1 {
+			parseFinal(b, method)
+		} else {
+			NarrowHits(url, method, b, cal)
+		}
+
+	}
+}
+
+func parseFinal(p core.ParamSet, method core.Method) {
+	for k := range p {
+		if method == http.MethodGet {
+			fmt.Println("\033[u\033[K", "[+] Found Parameter:", k, "(GET)")
+		}
+		if method == http.MethodPost {
+			fmt.Println("\033[u\033[K", "[+] Found Parameter:", k, "(POST)")
+		}
+		fmt.Print("\033[s")
+		if method == http.MethodGet {
+			FoundGet = append(FoundGet, k)
+		}
+		if method == http.MethodPost {
+			FoundPost = append(FoundPost, k)
+		}
+		break
+	}
 }
 
 //splitMap splits a ParamSet into 2 equal chunks.
