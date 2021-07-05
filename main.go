@@ -35,7 +35,7 @@ func init() {
 func main() {
 	header()
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'find' or 'attack' subcommands")
+		core.Eprint("expected 'find' or 'attack' subcommands")
 		fmt.Println("")
 		paraUsage()
 		os.Exit(1)
@@ -59,7 +59,7 @@ func main() {
 		attack.AttackMain()
 
 	default:
-		fmt.Println("expected 'find' or 'attack' subcommands")
+		core.Eprint("expected 'find' or 'attack' subcommands")
 		paraUsage()
 		os.Exit(1)
 	}
@@ -86,5 +86,5 @@ __________                    __________                __
  |____|    (____  /__|  (____  /______  /____//____  > |__|  \___  >__|   
                 \/           \/       \/           \/            \/       
 `
-	fmt.Println(header)
+	fmt.Println(core.ErrorColor, header, core.Reset)
 }
