@@ -45,7 +45,7 @@ func main() {
 
 	case "find":
 		if len(os.Args[2:]) < 2 {
-			find.Flags.Usage()
+			find.Usage()
 		}
 		find.Flags.Parse(os.Args[2:])
 		find.FindMain()

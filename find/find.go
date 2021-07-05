@@ -13,33 +13,66 @@ import (
 )
 
 var Flags = flag.NewFlagSet("find", flag.ExitOnError)
-var URL = Flags.String("url", "", "Target URL to test")
-var Wordlist = Flags.String("wordlist", "", "Parameter wordlist")
-var Chunks = Flags.Int("chunk", 50, "Chunk Size")
-var Meth = Flags.String("method", "all", "Method [get,post,all]")
-var MaxConcurrent = Flags.Int("threads", 10, "Concurent threads")
+
+var URL string
+var Wordlist string
+var Chunks int
+var Meth string
+var MaxConcurrent int
 
 var FoundGet []string
 var FoundPost []string
 
 var throttle core.Throttle
 
+func init() {
+	Flags.StringVar(&URL, "url", "", "Target URL to test")
+	Flags.StringVar(&URL, "u", "", "")
+	Flags.StringVar(&Wordlist, "wordlist", "", "Parameter wordlist")
+	Flags.StringVar(&Wordlist, "w", "", "")
+	Flags.IntVar(&Chunks, "chunk", 50, "Chunk Size")
+	Flags.IntVar(&Chunks, "c", 50, "")
+	Flags.StringVar(&Meth, "method", "all", "Method [get,post,all]")
+	Flags.StringVar(&Meth, "m", "all", "")
+	Flags.IntVar(&MaxConcurrent, "threads", 10, "Concurent threads")
+	Flags.IntVar(&MaxConcurrent, "t", 10, "")
+}
+
 func Usage() {
 	fmt.Println()
-	Flags.Usage()
+	// Flags.Usage()
+	use := `
+Usage of find:
+	-chunk|c int
+		Chunk Size (default 50)
+
+	-method|m string
+		Method [get,post,all] (default "all")
+
+	-threads|t int
+		Concurent threads (default 10)
+
+	-url|u string
+		Target URL to test
+		
+	-wordlist|w string
+		Parameter wordlist
+	`
+	fmt.Println(use)
 }
 
 func FindMain() {
-	throttle = throttle.New(*MaxConcurrent)
 
-	words, err := core.ReadLines(*Wordlist)
+	throttle = throttle.New(MaxConcurrent)
+
+	words, err := core.ReadLines(Wordlist)
 	if err != nil {
 		core.Eprint("Failed to open the wordlist")
 		os.Exit(1)
 	}
 
 	core.Iprint("Testing connection")
-	resp, err := core.DoRequest(*URL, http.MethodGet, core.ParamSet{})
+	resp, err := core.DoRequest(URL, http.MethodGet, core.ParamSet{})
 	if err != nil {
 		core.Eprint(err.Error())
 		os.Exit(1)
@@ -52,13 +85,13 @@ func FindMain() {
 		words = append(tmpWords, words...)
 	}
 
-	switch strings.ToLower(*Meth) {
+	switch strings.ToLower(Meth) {
 	case "get":
 		ScanGet(words)
 		fmt.Println("\033[u\033[K\n")
 		if len(FoundGet) > 0 {
 			core.Nprint("Found", len(FoundGet), "GET parameters:", strings.Join(FoundGet, ", "), "\n")
-			fmt.Println("(GET):" + *URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
+			fmt.Println("(GET):" + URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
 			fmt.Println()
 		} else {
 			core.Fprint("No GET parameters found !!")
@@ -71,19 +104,19 @@ func FindMain() {
 	}
 
 	fmt.Println("\033[u\033[K\n")
-	if strings.ToLower(*Meth) == "get" || strings.ToLower(*Meth) == "all" {
+	if strings.ToLower(Meth) == "get" || strings.ToLower(Meth) == "all" {
 		if len(FoundGet) > 0 {
 			core.Nprint("Found", len(FoundGet), "GET parameters:", strings.Join(FoundGet, ", "), "\n")
-			fmt.Println("(GET):" + *URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
+			fmt.Println("(GET):" + URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
 			fmt.Println()
 		} else {
 			core.Fprint("No GET parameters found !!")
 		}
 	}
-	if strings.ToLower(*Meth) == "post" || strings.ToLower(*Meth) == "all" {
+	if strings.ToLower(Meth) == "post" || strings.ToLower(Meth) == "all" {
 		if len(FoundPost) > 0 {
 			core.Nprint("Found", len(FoundPost), "POST parameters:", strings.Join(FoundPost, ", "), "\n")
-			fmt.Println("(POST):" + *URL + "?" + strings.Join(FoundPost, "=FUZZ&") + "=FUZZ")
+			fmt.Println("(POST):" + URL + "?" + strings.Join(FoundPost, "=FUZZ&") + "=FUZZ")
 			fmt.Println()
 		} else {
 			core.Fprint("No POST parameters found !!")
@@ -94,7 +127,7 @@ func FindMain() {
 func ScanPost(words []string) {
 	// fmt.Println("\033[u\033[K\n")
 	core.Iprint("Starting Auto Calibration (POST)")
-	ac, err := AutoCalibrated(*URL, http.MethodPost)
+	ac, err := AutoCalibrated(URL, http.MethodPost)
 	if err != nil {
 		core.Eprint("AutoCalibration Failed:", err.Error())
 		os.Exit(1)
@@ -103,12 +136,12 @@ func ScanPost(words []string) {
 	core.Iprint("Running (POST)...")
 	fmt.Print("\033[s")
 
-	chunks := GetChunks(words, *Chunks)
+	chunks := GetChunks(words, Chunks)
 	for i, chunk := range chunks {
 		fmt.Print("\033[u\033[K", "processing chunk ", i, " of ", len(chunks))
 
 		throttle.WaitForSpot()
-		go threadFunc(*URL, http.MethodPost, ac, chunk)
+		go threadFunc(URL, http.MethodPost, ac, chunk)
 
 	}
 	throttle.WaitForDone()
@@ -117,7 +150,7 @@ func ScanPost(words []string) {
 
 func ScanGet(words []string) {
 	core.Iprint("Starting Auto Calibration (GET)")
-	ac, err := AutoCalibrated(*URL, http.MethodGet)
+	ac, err := AutoCalibrated(URL, http.MethodGet)
 	if err != nil {
 		core.Eprint("AutoCalibration Failed:", err.Error())
 		os.Exit(1)
@@ -126,11 +159,11 @@ func ScanGet(words []string) {
 	core.Iprint("Running (GET)...")
 	fmt.Print("\033[s")
 
-	chunks := GetChunks(words, *Chunks)
+	chunks := GetChunks(words, Chunks)
 	for i, chunk := range chunks { //! maybe we can make this a chan, pipe new form names to the chan and iterate??????????????
 		fmt.Print("\033[u\033[K", "processing chunk ", i, " of ", len(chunks))
 		throttle.WaitForSpot()
-		go threadFunc(*URL, http.MethodGet, ac, chunk)
+		go threadFunc(URL, http.MethodGet, ac, chunk)
 
 	}
 
@@ -144,11 +177,11 @@ func threadFunc(url string, method core.Method, cal *Calibration, chunk []string
 	for _, a := range chunk {
 		p[a] = core.RandomString(8) //! TODO try other value types ???
 	}
-	isdiff, msg := requestAndDiff(*URL, method, p, cal)
+	isdiff, msg := requestAndDiff(URL, method, p, cal)
 	if !isdiff && msg != "" {
 		core.Eprint(msg)
 	} else if isdiff {
-		NarrowHits(*URL, method, p, cal)
+		NarrowHits(URL, method, p, cal)
 	}
 
 }
