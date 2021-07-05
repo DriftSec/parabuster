@@ -103,9 +103,8 @@ func ScanPost(words []string) {
 		} else {
 			threads.wG.Wait()
 		}
-		threads.wG.Wait()
-
 	}
+	threads.wG.Wait()
 
 }
 
@@ -132,9 +131,10 @@ func ScanGet(words []string) {
 		} else {
 			threads.wG.Wait()
 		}
-		threads.wG.Wait()
+		// threads.wG.Wait()
 
 	}
+	threads.wG.Wait()
 
 }
 
@@ -143,7 +143,7 @@ func threadFunc(url string, method core.Method, cal *Calibration, chunk []string
 	for _, a := range chunk {
 		p[a] = core.RandomString(8) //! TODO try other value types ???
 	}
-	isdiff, msg := requestAndDiff(*URL, http.MethodGet, p, cal)
+	isdiff, msg := requestAndDiff(*URL, method, p, cal)
 	if !isdiff && msg != "" {
 		fmt.Println("[ERROR]", msg)
 	} else if isdiff {
