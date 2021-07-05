@@ -9,23 +9,22 @@ Modes:
      find                 Discovers paramaters for an URL.
      attack               Fuzzes known parameters for issues.
 
-Usage of find:
-  -chunk int
-        Chunk Size (default 50)
-  -method string
-        Method [get,post,all] (default "all")
-  -threads int
-        Concurent threads (default 10)
-  -url string
-        Target URL to test
-  -wordlist string
-        Parameter wordlist
 
-Usage of attack:
-  -payloads string
-        File containing payloads
-  -url string
-        Target URL to test
+Usage of find:
+    -chunk|c int
+            Chunk Size (default 50)
+
+    -method|m string
+            Method [get,post,all] (default "all")
+
+    -threads|t int
+            Concurent threads (default 10)
+
+    -url|u string
+            Target URL to test
+
+    -wordlist|w string
+            Parameter wordlist
 ```
 
 ### Find 
