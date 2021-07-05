@@ -69,6 +69,13 @@ func FindMain() {
 	if len(FoundPost) > 0 {
 		fmt.Println("[+] Found", len(FoundPost), "POST parameters:", strings.Join(FoundPost, ", "))
 		fmt.Println()
+		tmp := *URL
+		tmp += "?"
+		for _, i := range FoundGet {
+			tmp += i + "=FUZZ&"
+		}
+		tmp = strings.TrimRight(tmp, "&")
+		fmt.Println(tmp)
 	} else {
 		fmt.Println("[-] No POST parameters found !!")
 	}
