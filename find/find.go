@@ -179,11 +179,11 @@ func parseFinal(p core.ParamSet, method core.Method, msg string) {
 	for k := range p {
 		if method == http.MethodGet {
 			fmt.Printf("\033[u\033[K")
-			core.Sprint("Found Parameter:", k, "(GET) (", msg, ")")
+			core.Sprint("Found Parameter:", k, "(GET) ("+msg+")")
 		}
 		if method == http.MethodPost {
 			fmt.Printf("\033[u\033[K")
-			core.Sprint("Found Parameter:", k, "(POST) (", msg, ")")
+			core.Sprint("Found Parameter:", k, "(POST) ("+msg+")")
 		}
 		fmt.Print("\033[s")
 		if method == http.MethodGet {
