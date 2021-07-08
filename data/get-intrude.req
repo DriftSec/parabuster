@@ -1,0 +1,5 @@
+GET /get?name=§asdf§&download=§asdf§ HTTP/2
+Host: localhost:8000
+User-Agent: curl/7.74.0
+Accept: */*
+Connection: close

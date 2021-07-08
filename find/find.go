@@ -32,7 +32,7 @@ func init() {
 	Flags.StringVar(&Wordlist, "w", "", "")
 	Flags.IntVar(&Chunks, "chunk", 50, "Chunk Size")
 	Flags.IntVar(&Chunks, "c", 50, "")
-	Flags.StringVar(&Meth, "method", "all", "Method [get,post,all]")
+	Flags.StringVar(&Meth, "method", "all", "Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON]")
 	Flags.StringVar(&Meth, "m", "all", "")
 	Flags.IntVar(&MaxConcurrent, "threads", 10, "Concurent threads")
 	Flags.IntVar(&MaxConcurrent, "t", 10, "")
@@ -47,7 +47,7 @@ Usage of find:
 		Chunk Size (default 50)
 
 	-method|m string
-		Method [get,post,all] (default "all")
+		Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON] (default "all")
 
 	-threads|t int
 		Concurent threads (default 10)
@@ -126,7 +126,7 @@ func FindMain() {
 
 func ScanPost(words []string) {
 	// fmt.Println("\033[u\033[K\n")
-	core.Iprint("Starting Auto Calibration (POST)")
+	core.Iprint("\nStarting Auto Calibration (POST)")
 	ac, err := AutoCalibrated(URL, http.MethodPost)
 	if err != nil {
 		core.Eprint("AutoCalibration Failed:", err.Error())

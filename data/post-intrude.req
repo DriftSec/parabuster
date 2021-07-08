@@ -1,0 +1,9 @@
+POST /post HTTP/2
+Host: localhost:8000
+User-Agent: curl/7.74.0
+Accept: */*
+Content-Length: 23
+Content-Type: application/x-www-form-urlencoded
+Connection: close
+
+name=§asdf§&download=§asdf§

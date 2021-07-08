@@ -1,0 +1,5 @@
+GET /cgi-bin/logme.py?name=asdf&download=asdf HTTP/2
+Host: 127.0.0.1:8000
+User-Agent: curl/7.74.0
+Accept: */*
+Connection: close
