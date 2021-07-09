@@ -1,0 +1,8 @@
+POST /cgi-bin/logme.py HTTP/1.1
+Host: 127.0.0.1:8000
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 53
+
+
+NeverGuessMe=FUZZ&download=FUZZ&name=FUZZ&return=FUZZ
+

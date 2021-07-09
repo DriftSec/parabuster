@@ -19,11 +19,36 @@ var Wordlist string
 var Chunks int
 var Meth string
 var MaxConcurrent int
+var OutRequest bool
+var OutBurp string
+
+type HeaderSlice []string
+type HeaderSet map[string]string
+
+var ExtraHeaderSlice HeaderSlice
+var ExtraHeaders HeaderSet
 
 var FoundGet []string
 var FoundPost []string
-
+var Found []string
 var throttle core.Throttle
+var MethodText = map[string]string{
+	"a": "ALL",
+	"g": "GET",
+	"p": "POST",
+	"m": "MULTIPART",
+	"x": "POSTXML",
+	"j": "POSTJSON",
+}
+
+func (i *HeaderSlice) String() string {
+	return fmt.Sprintf("%s", *i)
+}
+
+func (i *HeaderSlice) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 func init() {
 	Flags.StringVar(&URL, "url", "", "Target URL to test")
@@ -32,10 +57,13 @@ func init() {
 	Flags.StringVar(&Wordlist, "w", "", "")
 	Flags.IntVar(&Chunks, "chunk", 50, "Chunk Size")
 	Flags.IntVar(&Chunks, "c", 50, "")
-	Flags.StringVar(&Meth, "method", "all", "Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON]")
-	Flags.StringVar(&Meth, "m", "all", "")
-	Flags.IntVar(&MaxConcurrent, "threads", 10, "Concurent threads")
+	Flags.StringVar(&Meth, "method", "gp", "Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON]")
+	Flags.StringVar(&Meth, "m", "gp", "")
+	Flags.IntVar(&MaxConcurrent, "threads", 10, "")
 	Flags.IntVar(&MaxConcurrent, "t", 10, "")
+	Flags.BoolVar(&OutRequest, "oR", false, "")
+	Flags.StringVar(&OutBurp, "burp", "", "")
+	Flags.Var(&ExtraHeaderSlice, "H", "")
 }
 
 func Usage() {
@@ -43,26 +71,35 @@ func Usage() {
 	// Flags.Usage()
 	use := `
 Usage of find:
-	-chunk|c int
+	-chunk|c [int]
 		Chunk Size (default 50)
 
-	-method|m string
-		Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON] (default "all")
+	-method|m [method string]
+		Method [a:all, g:GET, p:POST normal, m:POST Multipart, x:POST XML, j:POST JSON] (default "gp")
 
-	-threads|t int
+	-threads|t [int]
 		Concurent threads (default 10)
 
-	-url|u string
+	-url|u [url]
 		Target URL to test
 		
-	-wordlist|w string
+	-wordlist|w [path]
 		Parameter wordlist
+
+	-oR
+		Output request files
+
+	-burp [burp url]
+		Pass a request containing found parameters to burp
+
+	-H ["header:value"]
+		Add additional headers, can be used multiple times.
 	`
 	fmt.Println(use)
 }
 
 func FindMain() {
-
+	ExtraHeaders = make(HeaderSet)
 	throttle = throttle.New(MaxConcurrent)
 
 	words, err := core.ReadLines(Wordlist)
@@ -72,7 +109,7 @@ func FindMain() {
 	}
 
 	core.Iprint("Testing connection")
-	resp, err := core.DoRequest(URL, http.MethodGet, core.ParamSet{})
+	resp, err := core.DoRequest(URL, "g", core.ParamSet{}, ExtraHeaders)
 	if err != nil {
 		core.Eprint(err.Error())
 		os.Exit(1)
@@ -85,85 +122,111 @@ func FindMain() {
 		words = append(tmpWords, words...)
 	}
 
-	switch strings.ToLower(Meth) {
-	case "get":
-		ScanGet(words)
-		fmt.Println("\033[u\033[K\n")
-		if len(FoundGet) > 0 {
-			core.Nprint("Found", len(FoundGet), "GET parameters:", strings.Join(FoundGet, ", "), "\n")
-			fmt.Println("(GET):" + URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
-			fmt.Println()
-		} else {
-			core.Fprint("No GET parameters found !!")
-		}
-	case "post":
-		ScanPost(words)
-	default:
-		ScanGet(words)
-		ScanPost(words)
+	Meth = strings.ToLower(Meth)
+	if strings.Contains(Meth, "g") || strings.Contains(Meth, "a") {
+		Scan(words, "g")
+	}
+	if strings.Contains(Meth, "p") || strings.Contains(Meth, "a") {
+		Scan(words, "p")
+	}
+	if strings.Contains(Meth, "m") || strings.Contains(Meth, "a") {
+		Scan(words, "m")
+	}
+	if strings.Contains(Meth, "x") || strings.Contains(Meth, "a") {
+		Scan(words, "x")
+	}
+	if strings.Contains(Meth, "j") || strings.Contains(Meth, "a") {
+		Scan(words, "j")
 	}
 
-	fmt.Println("\033[u\033[K\n")
-	if strings.ToLower(Meth) == "get" || strings.ToLower(Meth) == "all" {
-		if len(FoundGet) > 0 {
-			core.Nprint("Found", len(FoundGet), "GET parameters:", strings.Join(FoundGet, ", "), "\n")
-			fmt.Println("(GET):" + URL + "?" + strings.Join(FoundGet, "=FUZZ&") + "=FUZZ")
-			fmt.Println()
-		} else {
-			core.Fprint("No GET parameters found !!")
-		}
+	fmt.Println("\033[u\033[K")
+	if len(Found) > 0 {
+		core.Nprint("Found", len(Found), "parameters:", strings.Join(Found, ", "), "\n")
+		parseOutput(Found)
+	} else {
+		core.Fprint("No parameters found !!")
 	}
-	if strings.ToLower(Meth) == "post" || strings.ToLower(Meth) == "all" {
-		if len(FoundPost) > 0 {
-			core.Nprint("Found", len(FoundPost), "POST parameters:", strings.Join(FoundPost, ", "), "\n")
-			fmt.Println("(POST):" + URL + "?" + strings.Join(FoundPost, "=FUZZ&") + "=FUZZ")
-			fmt.Println()
-		} else {
-			core.Fprint("No POST parameters found !!")
+
+}
+
+func parseOutput(found []string) {
+	results := make(map[string][]string)
+	for _, hit := range found {
+		parts := strings.SplitN(hit, ":", 2)
+		m, p := parts[0], parts[1]
+		results[m] = append(results[m], p)
+	}
+	for k, v := range results {
+		fmt.Println("(" + k + "):" + strings.Join(v, ", "))
+	}
+
+	for k, v := range results {
+		params := make(core.ParamSet)
+		for _, param := range v {
+			params[param] = "FUZZ"
+		}
+		switch k {
+		case "GET":
+			req, _ := core.CreateReqGet(URL, params)
+			if OutBurp != "" {
+				core.MakeRequest(req, OutBurp)
+			}
+			if OutRequest {
+				core.DumpRawRequest(req, k+".req")
+			}
+		case "POST":
+			req, _ := core.CreateReqPost(URL, params)
+			if OutBurp != "" {
+				core.MakeRequest(req, OutBurp)
+			}
+			if OutRequest {
+				core.DumpRawRequest(req, k+".req")
+			}
+		case "POSTJSON":
+			req, _ := core.CreateReqPostJSON(URL, params)
+			if OutBurp != "" {
+				core.MakeRequest(req, OutBurp)
+			}
+			if OutRequest {
+				core.DumpRawRequest(req, k+".req")
+			}
+		case "POSTXML":
+			req, _ := core.CreateReqPostXML(URL, params)
+			if OutBurp != "" {
+				core.MakeRequest(req, OutBurp)
+			}
+			if OutRequest {
+				core.DumpRawRequest(req, k+".req")
+			}
+		case "MULTIPART":
+			req, _ := core.CreateReqPostMultipart(URL, params)
+			if OutBurp != "" {
+				core.MakeRequest(req, OutBurp)
+			}
+			if OutRequest {
+				core.DumpRawRequest(req, k+".req")
+			}
 		}
 	}
 }
 
-func ScanPost(words []string) {
-	// fmt.Println("\033[u\033[K\n")
-	core.Iprint("\nStarting Auto Calibration (POST)")
-	ac, err := AutoCalibrated(URL, http.MethodPost)
+func Scan(words []string, methodChar string) {
+	core.Iprint("Starting Auto Calibration (" + MethodText[methodChar] + ")")
+	ac, err := AutoCalibrate(URL, methodChar)
 	if err != nil {
+		fmt.Println()
 		core.Eprint("AutoCalibration Failed:", err.Error())
-		os.Exit(1)
+		return
 	}
 	core.Iprint("Content is stable")
-	core.Iprint("Running (POST)...")
+	core.Iprint("Running (" + MethodText[methodChar] + ")...")
 	fmt.Print("\033[s")
 
 	chunks := GetChunks(words, Chunks)
 	for i, chunk := range chunks {
 		fmt.Print("\033[u\033[K", "processing chunk ", i, " of ", len(chunks))
-
 		throttle.WaitForSpot()
-		go threadFunc(URL, http.MethodPost, ac, chunk)
-
-	}
-	throttle.WaitForDone()
-
-}
-
-func ScanGet(words []string) {
-	core.Iprint("Starting Auto Calibration (GET)")
-	ac, err := AutoCalibrated(URL, http.MethodGet)
-	if err != nil {
-		core.Eprint("AutoCalibration Failed:", err.Error())
-		os.Exit(1)
-	}
-	core.Iprint("Content is stable")
-	core.Iprint("Running (GET)...")
-	fmt.Print("\033[s")
-
-	chunks := GetChunks(words, Chunks)
-	for i, chunk := range chunks { //! maybe we can make this a chan, pipe new form names to the chan and iterate??????????????
-		fmt.Print("\033[u\033[K", "processing chunk ", i, " of ", len(chunks))
-		throttle.WaitForSpot()
-		go threadFunc(URL, http.MethodGet, ac, chunk)
+		go threadFunc(URL, methodChar, ac, chunk)
 
 	}
 
@@ -171,60 +234,50 @@ func ScanGet(words []string) {
 
 }
 
-func threadFunc(url string, method core.Method, cal *Calibration, chunk []string) {
+func threadFunc(url string, methodChar string, cal *Calibration, chunk []string) {
 	defer throttle.Done()
 	p := make(core.ParamSet)
 	for _, a := range chunk {
 		p[a] = core.RandomString(8) //! TODO try other value types ???
 	}
-	isdiff, msg := requestAndDiff(URL, method, p, cal)
+	isdiff, msg := requestAndDiff(URL, methodChar, p, cal)
 	if !isdiff && msg != "" {
 		core.Eprint(msg)
 	} else if isdiff {
-		NarrowHits(URL, method, p, cal)
+		NarrowHits(URL, methodChar, p, cal)
 	}
 
 }
 
 // NarrowHits recursively splits, requests and compares any hits until parameter length is 1.
-func NarrowHits(url string, method core.Method, params core.ParamSet, cal *Calibration) {
+func NarrowHits(url string, methodChar string, params core.ParamSet, cal *Calibration) {
 	a, b := splitMap(params)
-	isdiffa, reason := requestAndDiff(url, method, a, cal)
+	isdiffa, reason := requestAndDiff(url, methodChar, a, cal)
 	if isdiffa {
 		if len(a) == 1 {
-			parseFinal(a, method, reason)
+			parseFinal(a, methodChar, reason)
 		} else {
-			NarrowHits(url, method, a, cal)
+			NarrowHits(url, methodChar, a, cal)
 		}
 	}
-	isdiffb, reason := requestAndDiff(url, method, b, cal)
+	isdiffb, reason := requestAndDiff(url, methodChar, b, cal)
 	if isdiffb {
 		if len(b) == 1 {
-			parseFinal(b, method, reason)
+			parseFinal(b, methodChar, reason)
 		} else {
-			NarrowHits(url, method, b, cal)
+			NarrowHits(url, methodChar, b, cal)
 		}
 
 	}
 }
 
-func parseFinal(p core.ParamSet, method core.Method, msg string) {
+func parseFinal(p core.ParamSet, methodChar string, msg string) {
 	for k := range p {
-		if method == http.MethodGet {
-			fmt.Printf("\033[u\033[K")
-			core.Sprint("Found Parameter:", k, "(GET) ("+msg+")")
-		}
-		if method == http.MethodPost {
-			fmt.Printf("\033[u\033[K")
-			core.Sprint("Found Parameter:", k, "(POST) ("+msg+")")
-		}
+		fmt.Printf("\033[u\033[K")
+		core.Sprint("Found Parameter:", k, "("+MethodText[methodChar]+") ("+msg+")")
+
 		fmt.Print("\033[s")
-		if method == http.MethodGet {
-			FoundGet = append(FoundGet, k)
-		}
-		if method == http.MethodPost {
-			FoundPost = append(FoundPost, k)
-		}
+		Found = append(Found, MethodText[methodChar]+":"+k)
 		break
 	}
 }
@@ -246,12 +299,12 @@ func splitMap(params core.ParamSet) (core.ParamSet, core.ParamSet) {
 }
 
 // requestAndDiff makes a request and compares it to the calibration.  returns true,"reason" if different, false,"error" if error, false,"" if the same
-func requestAndDiff(url string, method core.Method, params core.ParamSet, cal *Calibration) (bool, string) {
-	resp, err := core.DoRequest(url, method, params)
+func requestAndDiff(url string, methodChar string, params core.ParamSet, cal *Calibration) (bool, string) {
+	resp, err := core.DoRequest(url, methodChar, params)
 	if err != nil {
 		return false, err.Error()
 	}
-	newBody := core.GetBodyString(resp)
+	newBody := core.GetBodyString(resp.Body)
 	curHeaders := resp.Header
 	delete(curHeaders, "Date")
 	delete(curHeaders, "Content-Length")

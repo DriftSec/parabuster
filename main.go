@@ -1,36 +1,33 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	"net/http/cookiejar"
 	"os"
 	"parabuster/attack"
 	"parabuster/core"
 	"parabuster/find"
 )
 
-func init() {
-	cfg := &tls.Config{
-		InsecureSkipVerify: true,
-	}
+// func init() {
+// 	cfg := &tls.Config{
+// 		InsecureSkipVerify: true,
+// 	}
 
-	http.DefaultClient.Transport = &http.Transport{
-		TLSClientConfig: cfg,
-	}
+// 	http.DefaultClient.Transport = &http.Transport{
+// 		TLSClientConfig: cfg,
+// 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	cookieJar, _ := cookiejar.New(nil)
-	core.Client = &http.Client{Transport: tr,
-		Jar: cookieJar,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		}}
+// 	tr := &http.Transport{
+// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+// 	}
+// 	cookieJar, _ := cookiejar.New(nil)
+// 	core.Client = &http.Client{Transport: tr,
+// 		Jar: cookieJar,
+// 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+// 			return http.ErrUseLastResponse
+// 		}}
 
-}
+// }
 
 func main() {
 	header()

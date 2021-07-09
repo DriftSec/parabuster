@@ -16,7 +16,7 @@ type Calibration struct {
 	Status   string
 }
 
-func AutoCalibrated(url string, method core.Method) (*Calibration, error) {
+func AutoCalibrate(url string, methodChar string, extraHeaders core.HeaderSet) (*Calibration, error) {
 	var (
 		cal  Calibration
 		resp *http.Response
@@ -28,11 +28,11 @@ func AutoCalibrated(url string, method core.Method) (*Calibration, error) {
 	testParam := core.RandomString(5)
 	testVal := core.RandomString(6)
 	tmpParams[testParam] = testVal
-	resp, err = core.DoRequest(url, method, tmpParams)
+	resp, err = core.DoRequest(url, methodChar, tmpParams,extraHeaders)
 	if err != nil {
 		return &Calibration{}, err
 	}
-	origBody := core.GetBodyString(resp)
+	origBody := core.GetBodyString(resp.Body)
 	origBody = strings.ReplaceAll(origBody, testParam, "") // need to clean random strings from body for later comparisions
 	origBody = strings.ReplaceAll(origBody, testVal, "")   // need to clean random strings from body for later comparisions
 	cal.Baseline = resp
@@ -46,11 +46,11 @@ func AutoCalibrated(url string, method core.Method) (*Calibration, error) {
 	tmpParams2 := make(core.ParamSet)
 	for i := 0; i <= 5; i++ {
 		tmpParams2[core.RandomString(i+3)] = core.RandomString(i + 4)
-		resp, err = core.DoRequest(url, method, tmpParams2)
+		resp, err = core.DoRequest(url, methodChar, tmpParams2,extraHeaders)
 		if err != nil {
 			return &Calibration{}, err
 		}
-		newBody := core.GetBodyString(resp)
+		newBody := core.GetBodyString(resp.Body)
 
 		curHeaders := resp.Header
 		delete(curHeaders, "Date")

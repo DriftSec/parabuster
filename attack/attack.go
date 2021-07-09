@@ -66,7 +66,7 @@ func AttackMain() {
 
 	// core.RequestFromFile(RequestFile)
 
-	tmp, err := core.ParseRawRequest(RequestFile, "http")
+	tmp, err := core.ReadRawRequest(RequestFile, "http")
 	if err != nil {
 		log.Fatal(err)
 	}
