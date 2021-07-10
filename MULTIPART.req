@@ -1,9 +1,9 @@
 POST /cgi-bin/logme.py HTTP/1.1
 Host: 127.0.0.1:8000
+Authorization: basic vasfjasdf==
 X-Forwarded-For: 127.0.0.1
 Content-Type: application/x-www-form-urlencoded
 Content-Length: 53
-Authorization: basic vasfjasdf==
 
 
 NeverGuessMe=FUZZ&download=FUZZ&name=FUZZ&return=FUZZ

@@ -1,5 +1,7 @@
 GET /cgi-bin/logme.py?NeverGuessMe=FUZZ&download=FUZZ&name=FUZZ&return=FUZZ HTTP/1.1
 Host: 127.0.0.1:8000
+X-Forwarded-For: 127.0.0.1
 Content-Type: application/x-www-form-urlencoded
+Authorization: basic vasfjasdf==
 
 

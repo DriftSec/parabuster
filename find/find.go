@@ -23,10 +23,9 @@ var OutRequest bool
 var OutBurp string
 
 type HeaderSlice []string
-type HeaderSet map[string]string
 
 var ExtraHeaderSlice HeaderSlice
-var ExtraHeaders HeaderSet
+var ExtraHeaders core.HeaderSet
 
 var FoundGet []string
 var FoundPost []string
@@ -99,7 +98,16 @@ Usage of find:
 }
 
 func FindMain() {
-	ExtraHeaders = make(HeaderSet)
+	ExtraHeaders = make(core.HeaderSet)
+	if len(ExtraHeaderSlice) > 0 {
+		for _, s := range ExtraHeaderSlice {
+			parts := strings.Split(s, ":")
+			key := strings.TrimLeft(strings.TrimRight(parts[0], " "), " ")
+			val := strings.TrimLeft(strings.TrimRight(parts[1], " "), " ")
+			ExtraHeaders[key] = val
+		}
+	}
+
 	throttle = throttle.New(MaxConcurrent)
 
 	words, err := core.ReadLines(Wordlist)
@@ -167,7 +175,7 @@ func parseOutput(found []string) {
 		}
 		switch k {
 		case "GET":
-			req, _ := core.CreateReqGet(URL, params)
+			req, _ := core.CreateReqGet(URL, params, ExtraHeaders)
 			if OutBurp != "" {
 				core.MakeRequest(req, OutBurp)
 			}
@@ -175,7 +183,7 @@ func parseOutput(found []string) {
 				core.DumpRawRequest(req, k+".req")
 			}
 		case "POST":
-			req, _ := core.CreateReqPost(URL, params)
+			req, _ := core.CreateReqPost(URL, params, ExtraHeaders)
 			if OutBurp != "" {
 				core.MakeRequest(req, OutBurp)
 			}
@@ -183,7 +191,7 @@ func parseOutput(found []string) {
 				core.DumpRawRequest(req, k+".req")
 			}
 		case "POSTJSON":
-			req, _ := core.CreateReqPostJSON(URL, params)
+			req, _ := core.CreateReqPostJSON(URL, params, ExtraHeaders)
 			if OutBurp != "" {
 				core.MakeRequest(req, OutBurp)
 			}
@@ -191,7 +199,7 @@ func parseOutput(found []string) {
 				core.DumpRawRequest(req, k+".req")
 			}
 		case "POSTXML":
-			req, _ := core.CreateReqPostXML(URL, params)
+			req, _ := core.CreateReqPostXML(URL, params, ExtraHeaders)
 			if OutBurp != "" {
 				core.MakeRequest(req, OutBurp)
 			}
@@ -199,7 +207,7 @@ func parseOutput(found []string) {
 				core.DumpRawRequest(req, k+".req")
 			}
 		case "MULTIPART":
-			req, _ := core.CreateReqPostMultipart(URL, params)
+			req, _ := core.CreateReqPostMultipart(URL, params, ExtraHeaders)
 			if OutBurp != "" {
 				core.MakeRequest(req, OutBurp)
 			}
@@ -212,7 +220,7 @@ func parseOutput(found []string) {
 
 func Scan(words []string, methodChar string) {
 	core.Iprint("Starting Auto Calibration (" + MethodText[methodChar] + ")")
-	ac, err := AutoCalibrate(URL, methodChar)
+	ac, err := AutoCalibrate(URL, methodChar, ExtraHeaders)
 	if err != nil {
 		fmt.Println()
 		core.Eprint("AutoCalibration Failed:", err.Error())
@@ -300,7 +308,7 @@ func splitMap(params core.ParamSet) (core.ParamSet, core.ParamSet) {
 
 // requestAndDiff makes a request and compares it to the calibration.  returns true,"reason" if different, false,"error" if error, false,"" if the same
 func requestAndDiff(url string, methodChar string, params core.ParamSet, cal *Calibration) (bool, string) {
-	resp, err := core.DoRequest(url, methodChar, params)
+	resp, err := core.DoRequest(url, methodChar, params, ExtraHeaders)
 	if err != nil {
 		return false, err.Error()
 	}
