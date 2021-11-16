@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"parabuster/core"
 	"reflect"
 	"strings"
+
+	"github.com/driftsec/parabuster/core"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,6 +25,7 @@ var OutBurp string
 
 type HeaderSlice []string
 
+// a
 var ExtraHeaderSlice HeaderSlice
 var ExtraHeaders core.HeaderSet
 
@@ -61,8 +63,10 @@ func init() {
 	Flags.IntVar(&MaxConcurrent, "threads", 10, "")
 	Flags.IntVar(&MaxConcurrent, "t", 10, "")
 	Flags.BoolVar(&OutRequest, "oR", false, "")
+	Flags.BoolVar(&core.DebugOn, "d", false, "")
 	Flags.StringVar(&OutBurp, "burp", "", "")
 	Flags.Var(&ExtraHeaderSlice, "H", "")
+	Flags.Usage = Usage
 }
 
 func Usage() {
@@ -102,6 +106,9 @@ func FindMain() {
 	if len(ExtraHeaderSlice) > 0 {
 		for _, s := range ExtraHeaderSlice {
 			parts := strings.Split(s, ":")
+			if len(parts) != 2 {
+				continue
+			}
 			key := strings.TrimLeft(strings.TrimRight(parts[0], " "), " ")
 			val := strings.TrimLeft(strings.TrimRight(parts[1], " "), " ")
 			ExtraHeaders[key] = val
@@ -124,6 +131,7 @@ func FindMain() {
 	}
 	form := ExtractForm(resp)
 	if len(form) > 0 {
+
 		core.Sprint("Adding form values to queue:", form)
 		var tmpWords []string
 		tmpWords = append(tmpWords, form...)
@@ -147,7 +155,7 @@ func FindMain() {
 		Scan(words, "j")
 	}
 
-	fmt.Println("\033[u\033[K")
+	// fmt.Println("\033[u\033[K")
 	if len(Found) > 0 {
 		core.Nprint("Found", len(Found), "parameters:", strings.Join(Found, ", "), "\n")
 		parseOutput(Found)
@@ -237,7 +245,7 @@ func Scan(words []string, methodChar string) {
 		go threadFunc(URL, methodChar, ac, chunk)
 
 	}
-
+	fmt.Print("\033[u\033[K\n")
 	throttle.WaitForDone()
 
 }
@@ -357,7 +365,13 @@ func ExtractForm(resp *http.Response) []string {
 	if err != nil {
 		core.Eprint("Error loading HTTP response body. ", err)
 		return []string{}
+
 	}
+	// doc.Find("form").Each(func(_ int, s *goquery.Selection) {
+	// 	action := s.Attr("action")
+
+	// })
+
 	doc.Find("form").Each(func(_ int, s *goquery.Selection) {
 		s.Find("input").Each(func(_ int, s *goquery.Selection) {
 			name, _ := s.Attr("name")
@@ -365,8 +379,8 @@ func ExtractForm(resp *http.Response) []string {
 				return
 			}
 			params = append(params, name)
-
 		})
+
 		s.Find("textarea").Each(func(_ int, s *goquery.Selection) {
 			name, _ := s.Attr("name")
 			if name == "" {

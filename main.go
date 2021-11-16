@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"parabuster/attack"
-	"parabuster/core"
-	"parabuster/find"
+
+	"github.com/driftsec/parabuster/core"
+	"github.com/driftsec/parabuster/find"
+
+	"github.com/driftsec/parabuster/attack"
 )
 
 // func init() {
@@ -41,18 +43,11 @@ func main() {
 	switch os.Args[1] {
 
 	case "find":
-		if len(os.Args[2:]) < 2 {
-			find.Usage()
-		}
 		find.Flags.Parse(os.Args[2:])
 		find.FindMain()
 
 	case "attack":
 		attack.Flags.Parse(os.Args[2:])
-		if len(os.Args[2:]) < 2 {
-			attack.Flags.Usage()
-		}
-
 		attack.AttackMain()
 
 	default:
@@ -68,8 +63,7 @@ func paraUsage() {
 	fmt.Println("Modes:")
 	fmt.Println("     find                 Discovers paramaters for an URL.")
 	fmt.Println("     attack               Fuzzes known parameters for issues.")
-	find.Usage()
-	attack.Usage()
+	fmt.Println()
 
 }
 

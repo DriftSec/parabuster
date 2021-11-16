@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"parabuster/core"
+
+	"github.com/driftsec/parabuster/core"
 )
 
 var Flags = flag.NewFlagSet("attack", flag.ExitOnError)
@@ -78,7 +79,7 @@ func AttackMain() {
 	// if err != nil {
 	// 	core.Eprint("Failed to open the payload wordlist")
 	// 	os.Exit(1)
-	// }
+	// }a
 
 	// core.Iprint("Testing connection")
 	// resp, err := core.DoRequest(URL, http.MethodGet, core.ParamSet{})

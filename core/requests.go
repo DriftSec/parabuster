@@ -62,6 +62,7 @@ func init() {
 }
 
 func DoRequest(targeturl string, methodChar string, params ParamSet, extraHeaders HeaderSet) (*http.Response, error) {
+
 	if methodChar == "g" {
 		req, _ := CreateReqGet(targeturl, params, extraHeaders)
 		return MakeRequest(req, "")
@@ -199,6 +200,7 @@ func MakeRequest(r *http.Request, proxy string) (*http.Response, error) {
 		return nil, err
 	}
 	// defer resp.Body.Close()
+	Dprint(r.URL, resp.StatusCode)
 	return resp, nil
 }
 

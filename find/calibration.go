@@ -2,11 +2,13 @@ package find
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
-	"parabuster/core"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/driftsec/parabuster/core"
 )
 
 type Calibration struct {
@@ -22,13 +24,12 @@ func AutoCalibrate(url string, methodChar string, extraHeaders core.HeaderSet) (
 		resp *http.Response
 		err  error
 	)
-
 	// Baseline
 	tmpParams := make(core.ParamSet)
 	testParam := core.RandomString(5)
 	testVal := core.RandomString(6)
 	tmpParams[testParam] = testVal
-	resp, err = core.DoRequest(url, methodChar, tmpParams,extraHeaders)
+	resp, err = core.DoRequest(url, methodChar, tmpParams, extraHeaders)
 	if err != nil {
 		return &Calibration{}, err
 	}
@@ -46,7 +47,7 @@ func AutoCalibrate(url string, methodChar string, extraHeaders core.HeaderSet) (
 	tmpParams2 := make(core.ParamSet)
 	for i := 0; i <= 5; i++ {
 		tmpParams2[core.RandomString(i+3)] = core.RandomString(i + 4)
-		resp, err = core.DoRequest(url, methodChar, tmpParams2,extraHeaders)
+		resp, err = core.DoRequest(url, methodChar, tmpParams2, extraHeaders)
 		if err != nil {
 			return &Calibration{}, err
 		}
@@ -58,6 +59,7 @@ func AutoCalibrate(url string, methodChar string, extraHeaders core.HeaderSet) (
 		curStatus := resp.Status
 
 		if curStatus != cal.Status {
+			fmt.Println(curStatus, "VS", cal.Status)
 			return &Calibration{}, errors.New("content is not stable (status)")
 		}
 
